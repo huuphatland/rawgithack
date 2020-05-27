@@ -1,191 +1,188 @@
-(function (doc) {
-  "use strict";
+(function(JQuery) {
+    JQuery.fn.thanhfaceseo = function(options) {        
+        var defaults = {  
+	    	animation: 'fadeAndPop', //fade, fadeAndPop, none
+		    animationspeed: 300, //how fast animtions are
+		    closeonbackgroundclick: true, //if you click background will modal close?
+		    dismissmodalclass: 'close-thanhfaceseo-modal' //the class of a button or element that will close an open modal
+    	}; 
 
-  const GITHUB_API_URL = 'https://api.github.com';
+        var options = JQuery.extend({}, defaults, options); 
+	
+        return this.each(function() {
+        	var modal = JQuery(this),
+        		topMeasure  = parseInt(modal.css('top')),
+				topOffset = modal.height() + topMeasure,
+          		locked = false,
+				modalBG = JQuery('.thanhfaceseo-modal-bg');
 
-  const TEMPLATES = [
-    [/^(https?):\/\/gitlab\.com\/([^\/]+.*\/[^\/]+)\/(?:raw|blob)\/(.+?)(?:\?.*)?$/i,
-     '$1://gl.githack.com/$2/raw/$3'],
-    [/^(https?):\/\/bitbucket\.org\/([^\/]+\/[^\/]+)\/(?:raw|src)\/(.+?)(?:\?.*)?$/i,
-     '$1://bb.githack.com/$2/raw/$3'],
+			if(modalBG.length == 0) {
+				modalBG = JQuery('<div class="thanhfaceseo-modal-bg" />').insertAfter(modal);
+			}		    
+			modal.bind('thanhfaceseo:open', function () {
+			  modalBG.unbind('click.modalEvent');
+				JQuery('.' + options.dismissmodalclass).unbind('click.modalEvent');
+				if(!locked) {
+					lockModal();
+					if(options.animation == "fadeAndPop") {
+						modal.css({'top': JQuery(document).scrollTop()-topOffset, 'opacity' : 0, 'visibility' : 'visible'});
+						modalBG.fadeIn(options.animationspeed/2);
+						modal.delay(options.animationspeed/2).animate({
+							"top": JQuery(document).scrollTop()+topMeasure + 'px',
+							"opacity" : 1
+						}, options.animationspeed,unlockModal());					
+					}
+					if(options.animation == "fade") {
+						modal.css({'opacity' : 0, 'visibility' : 'visible', 'top': JQuery(document).scrollTop()+topMeasure});
+						modalBG.fadeIn(options.animationspeed/2);
+						modal.delay(options.animationspeed/2).animate({
+							"opacity" : 1
+						}, options.animationspeed,unlockModal());					
+					} 
+					if(options.animation == "none") {
+						modal.css({'visibility' : 'visible', 'top':JQuery(document).scrollTop()+topMeasure});
+						modalBG.css({"display":"block"});	
+						unlockModal()				
+					}
+				}
+				modal.unbind('thanhfaceseo:open');
+			}); 	
 
-    // snippet file URL from web interface, with revision
-    [/^(https?):\/\/bitbucket\.org\/snippets\/([^\/]+\/[^\/]+)\/revisions\/([^\/\#\?]+)(?:\?[^#]*)?(?:\#file-(.+?))$/i,
-     '$1://bb.githack.com/!api/2.0/snippets/$2/$3/files/$4'],
-    // snippet file URL from web interface, no revision
-    [/^(https?):\/\/bitbucket\.org\/snippets\/([^\/]+\/[^\/\#\?]+)(?:\?[^#]*)?(?:\#file-(.+?))$/i,
-     '$1://bb.githack.com/!api/2.0/snippets/$2/HEAD/files/$3'],
-    // snippet file URLs from REST API
-    [/^(https?):\/\/bitbucket\.org\/\!api\/2.0\/snippets\/([^\/]+\/[^\/]+\/[^\/]+)\/files\/(.+?)(?:\?.*)?$/i,
-     '$1://bb.githack.com/!api/2.0/snippets/$2/files/$3'],
-    [/^(https?):\/\/api\.bitbucket\.org\/2.0\/snippets\/([^\/]+\/[^\/]+\/[^\/]+)\/files\/(.+?)(?:\?.*)?$/i,
-     '$1://bb.githack.com/!api/2.0/snippets/$2/files/$3'],
+			modal.bind('thanhfaceseo:close', function () {
+			  if(!locked) {
+					lockModal();
+					if(options.animation == "fadeAndPop") {
+						modalBG.delay(options.animationspeed).fadeOut(options.animationspeed);
+						modal.animate({
+							"top":  JQuery(document).scrollTop()-topOffset + 'px',
+							"opacity" : 0
+						}, 0, function() {
+							modal.css({'top':topMeasure, 'opacity' : 1, 'visibility' : 'hidden'});
+							unlockModal();
+						});					
+					}  	
+					if(options.animation == "fade") {
+						modalBG.delay(options.animationspeed).fadeOut(options.animationspeed);
+						modal.animate({
+							"opacity" : 0
+						}, 0, function() {
+							modal.css({'opacity' : 1, 'visibility' : 'hidden', 'top' : topMeasure});
+							unlockModal();
+						});					
+					}  	
+					if(options.animation == "none") {
+						modal.css({'visibility' : 'hidden', 'top' : topMeasure});
+						modalBG.css({'display' : 'none'});	
+					}		
+				}
+				modal.unbind('thanhfaceseo:close');
+			});     
+   	
+    	modal.trigger('thanhfaceseo:open')
+			
+			//Close Modal Listeners
+			var closeButton = JQuery('.' + options.dismissmodalclass).bind('click.modalEvent', function () {
+			  modal.trigger('thanhfaceseo:close')
+			});
+			
+			if(options.closeonbackgroundclick) {
+				modalBG.css({"cursor":"pointer"})
+				modalBG.bind('click.modalEvent', function () {
+				  modal.trigger('thanhfaceseo:close')
+				});
+			}
+			JQuery('body').keyup(function(e) {
+        		if(e.which===27){ modal.trigger('thanhfaceseo:close'); } // 27 is the keycode for the Escape key
+			});
+			
+			function unlockModal() { 
+				locked = false;
+			}
+			function lockModal() {
+				locked = true;
+			}	
+			
+        });//each call
+    }//orbit plugin call
+})(jQuery);
+        
+var divpopup = document.createElement("div");
+jQuery(divpopup).attr('id', 'myModalthanh');
+jQuery(divpopup).attr('class', 'thanhfaceseo-modal');
+jQuery( "body" ).append(divpopup);
+var titleform='Đăng ký Form';
+var urlform="https://docs.google.com/forms/u/0/d/e/1FAIpQLSeshmDYyu3R0QGlOxGNWUFw3f48EKTzilQVNxdbB9eabYkZ4w/formResponse";
+var urlchuyen=window.location.href;
+var hovaten="260031370";
+var dienthoai="1266934214";
+var email="640148827";
+var duan="1237371760";
+var submittitle='Đăng ký tư vấn';
+var submittedform=false;
+var titleheader="ĐĂNG KÝ TƯ VẤN NHẬN ƯU ĐÃI";
+var hotline="0931797814";
+var linkhientai=window.location.href;
+var thoigianhien=180000;
+var formdiv='<div class="popup-body"><iframe id="hidden_iframethanh" name="hidden_iframethanh" onload="thanhxet()" style="display:none;"></iframe><div class="box-thanh-form"><div class="img"></div><div class="thanhform-level1"><h2><a class="close-thanhfaceseo-modal">X</a></h2></div><div id="cems-subscription" class="cems-subscription"><div class="sss-form-content thanhgform_wrapper"> <form class="form-hasBg" onsubmit="submittedform=true;" target="hidden_iframethanh" method="post" action="'+urlform+'"><div class="gform_body"><h2 class="form-title yellow-text-gradient">'+titleheader+'</h2><div class="description">					<p>Vui lòng điền chính xác các thông tin bên dưới để nhận tài liệu của dự án</p>				</div>     <ul class="thanhtop_label"> ';
+formdiv+= '<li class="sss-form-control gfield ">  <div class="sss-form-control-inner">                               <div class="ginput_container">                  <input class="medium" name="entry.'+hovaten+'" maxlength="70" id="your_name" placeholder="Họ tên" value="" type="text">                </div>              </div>            </li> ';
+formdiv+= '<li class="sss-form-control gfield ">              <div class="sss-form-control-inner">                              <div class="ginput_container">                  <input class="medium" name="entry.'+email+'" maxlength="320" id="email_addr" placeholder="Email" value="" type="email"/>                </div>              </div>            </li> ';
+formdiv+= ' <li class="sss-form-control gfield ">              <div class="sss-form-control-inner">                                <div class="ginput_container">                  <input class="medium" name="entry.'+dienthoai+'" maxlength="15" id="your_phone" placeholder="Số điện thoại" value="" length="11" type="tel"/>                </div>              </div>            </li>';
 
-    // welcome rawgit refugees
-    [/^(https?):\/\/(?:cdn\.)?rawgit\.com\/(.+?\/[0-9a-f]+\/raw\/(?:[0-9a-f]+\/)?.+)$/i,
-     '$1://gist.githack.com/$2'],
-    [/^(https?):\/\/(?:cdn\.)?rawgit\.com\/([^\/]+\/[^\/]+\/[^\/]+|[0-9A-Za-z-]+\/[0-9a-f]+\/raw)\/(.+)/i,
-     '$1://raw.githack.com/$2/$3'],
+formdiv+= ' <li class="sss-form-control gfield thanhan">              <div class="sss-form-control-inner">                                <div class="ginput_container">                  <input class="medium" name="entry.'+duan+'" maxlength="15" id="your_phone" placeholder="Dự án" value="'+linkhientai+'" length="11" type="tel"/>                </div>              </div>            </li>';
 
-    // ...and maybe gitcdn.xyz? ;)
-    [/^(https?):\/\/gitcdn\.(?:xyz|link)\/[^\/]+\/(.+?\/[0-9a-f]+\/raw\/(?:[0-9a-f]+\/)?.+)$/i,
-     '$1://gist.githack.com/$2'],
-    [/^(https?):\/\/gitcdn\.(?:xyz|link)\/[^\/]+\/([^\/]+\/[^\/]+\/[^\/]+|[0-9A-Za-z-]+\/[0-9a-f]+\/raw)\/(.+)/i,
-     '$1://raw.githack.com/$2/$3'],
 
-    [/^(https?):\/\/raw\.github(?:usercontent)?\.com\/([^\/]+\/[^\/]+\/[^\/]+|[0-9A-Za-z-]+\/[0-9a-f]+\/raw)\/(.+)/i,
-     '$1://raw.githack.com/$2/$3'],
-    [/^(https?):\/\/github\.com\/(.[^\/]+?)\/(.[^\/]+?)\/(?!releases\/)(?:(?:blob|raw)\/)?(.+?\/.+)/i,
-     '$1://raw.githack.com/$2/$3/$4'],
-    [/^(https?):\/\/gist\.github(?:usercontent)?\.com\/(.+?\/[0-9a-f]+\/raw\/(?:[0-9a-f]+\/)?.+)$/i,
-     '$1://gist.githack.com/$2']
-  ];
+formdiv+= '</ul>        </div>        <div class="gform_footer">          <div class="sss-form-control last" style="text-align:center;">            <input value="'+submittitle+'" type="submit"/>          </div> <span style="display:inline-block">HOTLINE:</span> <a href="tel:'+hotline+'" class="hotlinegoi" style="display:inline-block"> '+hotline+'</a>       </div>      </form>    </div>  </div></div></div>';
 
-  var prodEl = doc.getElementById('url-prod');
-  var devEl  = doc.getElementById('url-dev');
-  var urlEl  = doc.getElementById('url');
 
-  new Clipboard('.url-copy-button');
+jQuery("#myModalthanh").html(formdiv);		
+		
+function thanhxet(){
 
-  var devCopyButton  = doc.getElementById('url-dev-copy');
-  var prodCopyButton = doc.getElementById('url-prod-copy');
-
-  if (doc.queryCommandSupported && doc.queryCommandSupported('copy')) {
-    devCopyButton.style.display  = 'inline-block';
-    prodCopyButton.style.display = 'inline-block';
-  }
-
-  urlEl.addEventListener('input', formatURL, false);
-
-  if (/(iPhone|iPad|iPod)/i.test(navigator.userAgent)) {
-    // On iOS, it's quite difficult to copy the value of readonly input elements (see https://git.io/vpI8Z).
-    // By making the inputs non-readonly and preventing keydown we can mimic the behaviour of readonly inputs while
-    // improving the copy-input-value interaction.
-    inputDev.removeAttribute('readonly')
-    inputProd.removeAttribute('readonly')
-    inputDev.addEventListener('keydown', function (e) {
-      e.preventDefault();
-    });
-    inputProd.addEventListener('keydown', function (e) {
-      e.preventDefault();
-    });
-  }
-
-  formatURL();
-
-  function formatURL() {
-    var url = urlEl.value = decodeURIComponent(urlEl.value.trim());
-
-    urlEl.classList.remove('valid');
-    urlEl.classList.toggle('invalid', url.length);
-    devEl.value  = '';
-    prodEl.value = '';
-    devEl.classList.remove('valid');
-    prodEl.classList.remove('valid');
-    devCopyButton.disabled = true;
-    prodCopyButton.disabled = true;
-
-    var ghUrl = maybeConvertUrl(url);
-    if (ghUrl) {
-      var matches = ghUrl.match(/^(\w+:\/\/(raw).githack.com\/([^\/]+)\/([^\/]+))\/([^\/]+)\/(.*)/i);
-      if (!matches) {
-        devEl.value = ghUrl;
-        prodEl.value = cdnize(ghUrl);
-        setValid();
-      } else if (matches[2] === 'raw') {
-        devEl.value = ghUrl;
-        let apiUrl = `${GITHUB_API_URL}/repos/${matches[3]}/${matches[4]}/git/refs/heads/${matches[5]}`;
-        fetch(apiUrl)
-          .then(res => { if (res.ok) return res.json(); })
-          .then(data => {
-            let ref = data && data.object && data.object.sha ? data.object.sha : matches[5];
-            prodEl.value = cdnize(`${matches[1]}/${ref}/${matches[6]}`);
-            setValid();
-          });
-      }
+if(submittedform) {
+	window.location="https://canhocaocaphangsangsaigon.blogspot.com/";
+var linkhientai=window.location;
+if(getCookie(linkhientai)){
+                	
+    }else{
+                   
+                    setCookie(linkhientai,'1',thoigianhien); 
     }
-  }
 
-  function maybeConvertUrl(url) {
-    for (var i in TEMPLATES) {
-      var [pattern, template] = TEMPLATES[i];
-      if (pattern.test(url)) {
-        return url.replace(pattern, template);
-      }
-    }
-  }
 
-  function cdnize(url) {
-    return url.replace(/^(\w+):\/\/(\w+)/, "$1://$2cdn");
-  }
 
-  function setValid() {
-    urlEl.classList.remove('invalid');
-    urlEl.classList.add('valid');
-    prodEl.classList.add('valid');
-    devEl.classList.add('valid');
-    devCopyButton.disabled = false;
-    prodCopyButton.disabled = false;
-  }
+     jQuery('#myModalthanh').css('display','none');				   
+	 jQuery('.thanhfaceseo-modal-bg').css('display','none');	
+	
+	}	
+}
 
-  prodEl.addEventListener('focus', onFocus);
-  devEl.addEventListener('focus', onFocus);
-  urlEl.addEventListener('focus', onFocus);
 
-  function onFocus(e) {
-    setTimeout(function () { e.target.select(); }, 1);
-  }
+ function setCookie(cname, cvalue, exdays) {
+                var d = new Date();
+                d.setTime(d.getTime() + exdays);
+                var expires = "expires="+d.toUTCString();
+                document.cookie = cname + "=" + cvalue + "; " + expires;
+            }
+             
+            function getCookie(cname) {
+                var name = cname + "=";
+                var ca = document.cookie.split(';');
+                for(var i=0; i<ca.length; i++) {
+                    var c = ca[i];
+                    while (c.charAt(0)==' ') c = c.substring(1);
+                    if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+                }
+                return "";
+            }
+		
+function showform(){
+	var linkhientai=window.location;
+	if(getCookie(linkhientai)){
+                	
+    }else{
+                    jQuery('#myModalthanh').thanhfaceseo(jQuery('#myModalthanh').data());
+                    setCookie(linkhientai,'1',thoigianhien); 
+    }	
+}
 
-  function hide(element) {
-    element.classList.add('hidden');
-  }
-
-  function show(element) {
-    element.classList.remove('hidden');
-  }
-
-  var filesTextarea = doc.querySelector('.purge textarea');
-  var filesSubmit = doc.querySelector('.purge input[type=submit]');
-  var filesWait = doc.querySelector('.purge .wait');
-  var filesSuccess = doc.querySelector('.purge .success');
-  var filesError = doc.querySelector('.purge .error');
-
-  autosize(filesTextarea);
-
-  filesTextarea.oninput = function() {
-    var result = [];
-    for (var url of this.value.split('\n')) {
-      var url = decodeURIComponent(url.trim());
-      var converted = maybeConvertUrl(url);
-      result.push(converted ? cdnize(converted) : url);
-    }
-    this.value = result.join('\n');
-    return false;
-  }
-
-  document.getElementById('purge-form').onsubmit = function() {
-    filesTextarea.disabled = true;
-    filesSubmit.disabled = true;
-    hide(filesSuccess);
-    hide(filesError);
-    show(filesWait);
-    var body = 'files=' + encodeURIComponent(filesTextarea.value);
-    fetch('/purge', { method: 'POST', body: body})
-      .then(res => {
-        if (res.status == 429) {
-          return {success: false, response: 'too many requests'};
-        }
-        return res.json();
-      })
-      .then(res => {
-          hide(filesWait);
-          filesSubmit.disabled = false;
-          filesTextarea.disabled = false;
-          var operand = res.success ? filesSuccess : filesError;
-          operand.textContent = res.response;
-          show(operand);
-      });
-    return false;
-  }
-
-}(document));
+var myVar=setInterval(function () {showform()}, 1000);
